@@ -7,3 +7,6 @@ this program is written by C++. The reason why I make this program is that the G
 ## 2: How to run it
 Above all, this program needs OPENCV and SOCKET libraries.
 you should first compile the "server.cpp" than compile "canva.cpp".
+
+## 3: How to train it
+you need MNIST dataset.
