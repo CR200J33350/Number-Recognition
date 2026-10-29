@@ -5,7 +5,7 @@
 
 std::vector<std::vector<float>> load_mnist_images(const std::string& filepath){
 	std::ifstream file(filepath,std::ios::binary);
-	if(!file) throw std::runtime_error("文件大道东上为何无文件");
+	if(!file) exit(1);
 	long long magic,num,rows,cols;
 	file.read(reinterpret_cast<char*>(&magic),4);
 	file.read(reinterpret_cast<char*>(&num),4);

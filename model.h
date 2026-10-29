@@ -2,6 +2,7 @@
 #define MODEL_H
 
 #include "matrix.h"
+#include "data_read.h"
 #include<bits/stdc++.h>
 
 class BaseModel{
@@ -10,8 +11,8 @@ class BaseModel{
 		virtual ~BaseModel() = default;
 		virtual int forward(const std::vector<float> input) = 0;
 		virtual void train(const std::string& bin_file,int epoch) = 0;
-		virtual bool load_weights(const std::string& filepath) = 0;
-		virtual bool save_weights(const std::string& filepath) = 0;
+		virtual void load_weights(const std::string& filepath) = 0;
+		virtual void save_weights(const std::string& filepath) = 0;
 };
 
 class recognize_model: BaseModel{
@@ -53,11 +54,67 @@ class recognize_model: BaseModel{
 			}
 			return prediction;
 		}
-		void train(const std::string& bin_file,int epoch) override{
-			matrix<float> final_output;
-		    matrix<float> hidden_output;
-		    matrix<float> output_grad;
-		    matrix<float> hidden_grad;
+		void init_weights(float a = 0.01f){
+			std::mt19937 gen(42); // 随机生成一堆数字作为初始的权重
+			std::normal_distribution<float> dist(0.0f,a); // 正态分布初始化
+			for(auto& v: w1.data) v = dist(gen);
+			for(auto& v: w2.data) v = dist(gen); 
+		}
+		
+		void train(const std::string& path, int epochs,float lr = 0.1f) override{
+			auto images = load_mnist_images(path + "/train-images-idx3-ubyte");
+			auto labels = load_mnist_labels(path + "/train-labels-idx3-ubyte");
+			if(images.size()!=labels.size()) exit(1);
+			init_weights();
+			size_t n =images.size();
+			for(int ep=0;ep<epochs;ep++){
+				float total_loss = 0;
+				for(int i=0;i<n;i++){
+					matrix<float> x(w1.c,1);
+					for(int j=0;j<epochs;j++) x(j,0) = images[i][j];
+					matrix<float> z1 = w1.multiply(x);
+					z1.add(b1);
+					matrix<float> a1 = z1;
+					a1.relu();
+					matrix<float> z2 = w2.multiply(a1);
+					z2.add(b2);
+					matrix<float> a2 = z2.smx();
+					
+					int label = labels[i];
+					total_loss -= std::log(a2(label,0) + 1e-8f);
+					
+					matrix<float> dw2 = dz2.multiply(a1.trasp());
+					matrix<float> db2 = dz2;
+					
+					matrix<float> da1 = w2.trasp().multiply(dz2);
+					matrix<float> dz1 = da1;
+					for(int j =0;j<dz1.r;j++){
+						if(z1(j,0) <= 0) dz1(j,0) = 0;
+					}
+					matrix<float> dw1 = dz1.multiply(x.trasp());
+					matrix<float> db1 = dz1
+					for(size_t j=0; j<w2.data.size();j++) w2.data[j] -= l2.dw2.data[j];
+					for(size_t j=0; j<b2.data.size();j++) b2.data[j] -= l2.db2.data[j];
+					for(size_t j=0; j<w1.data.size();j++) w1.data[j] -= l2.dw1.data[j];
+					for(size_t j=0; j<b1.data.size();j++) b1.data[j] -= l2.db1.data[j];
+																				
+					
+				}
+				}
+		}
+		void load_weights(const std::string& filepath){
+			std::ofstream in(filepath,std::ios::binary);
+			out.read(reinterpret_cast<char*>(w1.data.data()),w1.data.size()*sizeof(float));
+			out.read(reinterpret_cast<char*>(b1.data.data()),b1.data.size()*sizeof(float));
+			out.read(reinterpret_cast<char*>(w2.data.data()),w2.data.size()*sizeof(float));
+			out.read(reinterpret_cast<char*>(b2.data.data()),b2.data.size()*sizeof(float));
+		}
+		void save_weights(const std::string& filepath){
+			std::ofstream out(filepath,std::ios::binary);
+			out.write(reinterpret_cast<char*>(w1.data.data()),w1.data.size()*sizeof(float));
+			out.write(reinterpret_cast<char*>(b1.data.data()),b1.data.size()*sizeof(float));
+			out.write(reinterpret_cast<char*>(w2.data.data()),w2.data.size()*sizeof(float));
+			out.write(reinterpret_cast<char*>(b2.data.data()),b2.data.size()*sizeof(float));
 		}
 };
 

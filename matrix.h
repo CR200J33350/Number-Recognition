@@ -25,7 +25,7 @@ class matrix{
 		}
 		// 乘法操作，行乘列，使用多线程优化
 		matrix<T> multiply(const matrix<T>& other){
-			if(c != other.r) throw std::invalid_argument("第一个矩阵行数不等于第二个矩阵的列数");
+			if(c != other.r) exit(1);
 			matrix<T> resl(r,other.c);
 			omp_set_num_threads(4);
 			#pragma omp parallel for
@@ -43,7 +43,7 @@ class matrix{
 		// 加法操作，对应元素相加
 		matrix<T>& add(const matrix<T>& other){
 			if(!is_same_shape(other)){
-				throw std::invalid_argument("矩阵不同型，无法相加");
+				exit(1);
 			}
 			for(int i=0;i< data.size();i++){
 				data[i] += other.data[i];
