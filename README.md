@@ -9,4 +9,4 @@ Above all, this program needs OPENCV and SOCKET libraries.
 you should first compile the "server.cpp" than compile "canva.cpp".
 
 ## 3: How to train it
-you need MNIST dataset.
+you need MNIST dataset, and run "myrecognize" to train model.
