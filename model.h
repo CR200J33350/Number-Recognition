@@ -3,19 +3,13 @@
 
 #include "matrix.h"
 #include "data_read.h"
-#include<bits/stdc++.h>
+#include<vector>
+#include<stdlib.h>
+#include<random>
+#include<cmath>
+using namespace std;
 
-class BaseModel{
-	// Éñ¾­ÍøÂç»ù´¡¼Ü¹¹£¬ÒÔ´ËÎª»ù´¡ÊµÏÖ
-	public:
-		virtual ~BaseModel() = default;
-		virtual int forward(const std::vector<float> input) = 0;
-		virtual void train(const std::string& bin_file,int epoch) = 0;
-		virtual void load_weights(const std::string& filepath) = 0;
-		virtual void save_weights(const std::string& filepath) = 0;
-};
-
-class recognize_model: BaseModel{
+class recognize_model{
 	private:
 		matrix<float> w1,b1;
 		matrix<float> w2,b2;
@@ -23,27 +17,27 @@ class recognize_model: BaseModel{
 		recognize_model(int input_size, int hidden_size,int output_size):
 			w1(hidden_size,input_size), b1(hidden_size,1),
 			w2(output_size,hidden_size),b2(output_size,1) {}
-		int forward(const std::vector<float>& input){
+		int forward(const vector<float>& input){
 			if(input.size() != w1.c){
-				throw std::invalid_argument("ÊäÈëµÄÉ¶ÄÌÁúÍæÒâ");
+				exit(1);
 			}
-			// Éú³ÉÒ»¸öÁĞÏòÁ¿
+			// ç”Ÿæˆä¸€ä¸ªåˆ—å‘é‡
 			matrix<float> col_input(w1.c,1);
 			for(int i=0;i<w1.c;i++){
 				col_input(i,0) = input[i];
 			}
-			// ½øĞĞÇ°Ïò´«²¥
-			// ÏßĞÔ±ä»»
+			// è¿›è¡Œå‰å‘ä¼ æ’­
+			// çº¿æ€§å˜æ¢
 			matrix<float> z1 = w1.multiply(col_input);
 			z1.add(b1);
-			// ¾­¹ı¼¤»îº¯Êı
+			// ç»è¿‡æ¿€æ´»å‡½æ•°
 			z1.relu();
-			// ½øĞĞÇ°Ïò´«²¥
-			// ÏßĞÔ±ä»»
+			// è¿›è¡Œå‰å‘ä¼ æ’­
+			// çº¿æ€§å˜æ¢
 			matrix<float> z2 = w2.multiply(z1);
 			z2.add(b2);
 			matrix<float> prob = z2.smx();
-			// ¾­¹ı¼¤»îº¯Êı
+			// ç»è¿‡æ¿€æ´»å‡½æ•°
 			int prediction = 0;
 			float max_p = prob(0,0);
 			for(int i=1;i<prob.r;i++){
@@ -55,15 +49,19 @@ class recognize_model: BaseModel{
 			return prediction;
 		}
 		void init_weights(float a = 0.01f){
-			std::mt19937 gen(42); // Ëæ»úÉú³ÉÒ»¶ÑÊı×Ö×÷Îª³õÊ¼µÄÈ¨ÖØ
-			std::normal_distribution<float> dist(0.0f,a); // ÕıÌ¬·Ö²¼³õÊ¼»¯
+			mt19937 gen(42); // éšæœºç”Ÿæˆä¸€å †æ•°å­—ä½œä¸ºåˆå§‹çš„æƒé‡
+			normal_distribution<float> dist(0.0f,a); // æ­£æ€åˆ†å¸ƒåˆå§‹åŒ–
 			for(auto& v: w1.data) v = dist(gen);
 			for(auto& v: w2.data) v = dist(gen); 
 		}
 		
-		void train(const std::string& path, int epochs,float lr = 0.1f) override{
-			auto images = load_mnist_images(path + "/train-images-idx3-ubyte");
-			auto labels = load_mnist_labels(path + "/train-labels-idx3-ubyte");
+		void train(const string path, int epochs,float lr = 0.1f){
+			// lr ä»£è¡¨å­¦ä¹ ç‡
+			cout << "å›¾ç‰‡è¯»å–ä¸­...\n";
+			auto images = load_mnist_images(path + "/train-images.idx3-ubyte");
+			cout << "æ ‡ç­¾è¯»å–ä¸­...\n";
+			auto labels = load_mnist_labels(path + "/train-labels.idx1-ubyte");
+			printf("æ•°æ®å·²å°±ç»ªï¼Œ%dè½®è®­ç»ƒå¼€å§‹:\n",epochs);
 			if(images.size()!=labels.size()) exit(1);
 			init_weights();
 			size_t n =images.size();
@@ -79,9 +77,10 @@ class recognize_model: BaseModel{
 					matrix<float> z2 = w2.multiply(a1);
 					z2.add(b2);
 					matrix<float> a2 = z2.smx();
-					
+					matrix<float> dz2 = a2;
 					int label = labels[i];
-					total_loss -= std::log(a2(label,0) + 1e-8f);
+					dz2(label, 0) -= 1.0f;
+					total_loss -= log(a2(label,0) + 1e-8f);
 					
 					matrix<float> dw2 = dz2.multiply(a1.trasp());
 					matrix<float> db2 = dz2;
@@ -92,25 +91,26 @@ class recognize_model: BaseModel{
 						if(z1(j,0) <= 0) dz1(j,0) = 0;
 					}
 					matrix<float> dw1 = dz1.multiply(x.trasp());
-					matrix<float> db1 = dz1
-					for(size_t j=0; j<w2.data.size();j++) w2.data[j] -= l2.dw2.data[j];
-					for(size_t j=0; j<b2.data.size();j++) b2.data[j] -= l2.db2.data[j];
-					for(size_t j=0; j<w1.data.size();j++) w1.data[j] -= l2.dw1.data[j];
-					for(size_t j=0; j<b1.data.size();j++) b1.data[j] -= l2.db1.data[j];
-																				
-					
+					matrix<float> db1 = dz1;
+					for(size_t j=0; j<w2.data.size();j++) w2.data[j] -= lr*dw2.data[j];
+					for(size_t j=0; j<b2.data.size();j++) b2.data[j] -= lr*db2.data[j];
+					for(size_t j=0; j<w1.data.size();j++) w1.data[j] -= lr*dw1.data[j];
+					for(size_t j=0; j<b1.data.size();j++) b1.data[j] -= lr*db1.data[j];
+				    }
+				printf("Epoch %d, Avg Loss: %.4f\n", ep, total_loss);
 				}
-				}
+			printf("æ¨¡å‹è®­ç»ƒå·²å®Œæˆ\n");
+			return;
 		}
-		void load_weights(const std::string& filepath){
-			std::ofstream in(filepath,std::ios::binary);
-			out.read(reinterpret_cast<char*>(w1.data.data()),w1.data.size()*sizeof(float));
-			out.read(reinterpret_cast<char*>(b1.data.data()),b1.data.size()*sizeof(float));
-			out.read(reinterpret_cast<char*>(w2.data.data()),w2.data.size()*sizeof(float));
-			out.read(reinterpret_cast<char*>(b2.data.data()),b2.data.size()*sizeof(float));
+		void load_weights(string filepath){
+			ifstream in(filepath,ios::binary);
+			in.read(reinterpret_cast<char*>(w1.data.data()),w1.data.size()*sizeof(float));
+			in.read(reinterpret_cast<char*>(b1.data.data()),b1.data.size()*sizeof(float));
+			in.read(reinterpret_cast<char*>(w2.data.data()),w2.data.size()*sizeof(float));
+			in.read(reinterpret_cast<char*>(b2.data.data()),b2.data.size()*sizeof(float));
 		}
-		void save_weights(const std::string& filepath){
-			std::ofstream out(filepath,std::ios::binary);
+		void save_weights(std::string filepath){
+			ofstream out(filepath,ios::binary);
 			out.write(reinterpret_cast<char*>(w1.data.data()),w1.data.size()*sizeof(float));
 			out.write(reinterpret_cast<char*>(b1.data.data()),b1.data.size()*sizeof(float));
 			out.write(reinterpret_cast<char*>(w2.data.data()),w2.data.size()*sizeof(float));
