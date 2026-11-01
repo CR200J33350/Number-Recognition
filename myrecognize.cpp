@@ -1,19 +1,21 @@
-#include<bits/stdc++.h>
+#include<iostream>
 #include "model.h"
+#include<stdlib.h>
 
 #define INPUT_SIZE 784
 #define HIDDEN_SIZE 128
 #define OUTPUT_SIZE 10
 
 using namespace std;
+
 int main(){
+	int epochs = 90;
 	recognize_model model(INPUT_SIZE,HIDDEN_SIZE,OUTPUT_SIZE);
-	string data_path = "./mnist_data";
-	int epochs = 100;
-	cout<<"¿ªÊ¼ÑµÁ·Ä£ÐÍ\n";
+	string data_path = "E:/development/handwritten_number_recognize/myhandwritten_number_recognize/mnist_data/";
+	cout<<"å¼€å§‹è®­ç»ƒæ¨¡åž‹\n";
 	model.train(data_path,epochs,0.1f);
 	model.save_weights("weights.bin");
-	cout<<"Ä£ÐÍÑµÁ·ÒÑÍê³É¡£"
+	cout << "æ¨¡åž‹è®­ç»ƒå·²å®Œæˆã€‚";
+	system("pause");
 	return 0;
 }
-
